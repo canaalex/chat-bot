@@ -166,17 +166,17 @@ function getWaveStyle(waveNumber) {
 const handleFileUpload = (event) => {
   const file = event.target.files[0];
   if (file) {
-    selectedFile.value = file; // Store the selected file
+    selectedFile.value = file;
 
-    fileName.value = file.name; // Track file name separately to show the cross button
+    fileName.value = file.name;
   }
 };
 
 // Remove the selected file
 const removeFile = () => {
   selectedFile.value = null;
-  newMessage.value = ""; // Clear the message input
-  fileName.value = ""; // Hide the cross button
+  newMessage.value = "";
+  fileName.value = "";
 };
 </script>
 
@@ -221,26 +221,28 @@ const removeFile = () => {
 
           <button
             @click="handleChat"
-            class="rounded-full p-0 bg-transparent border-none"
+            class="rounded-full p-0 bg-transparent border-none border-transparent"
           >
             <div
               class="md:hidden xl:p-1 w-6 h-6 md:w-12 md:h-12 xl:w-14 xl:h-14 rounded-full flex items-center justify-center bg-blue-500"
             >
+              <!-- Chat Bubble Icon -->
               <svg
                 v-if="!isChatOpen"
-                class="w-4 h-4 md:w-7 md:h-7 xl:w-8 xl:h-8 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
                 xmlns="http://www.w3.org/2000/svg"
+                class="w-6 h-6 md:w-7 md:h-7 xl:w-8 xl:h-8 text-white"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+                stroke="currentColor"
               >
                 <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M4 6h16M4 12h16m-7 6h7"
+                  fill-rule="evenodd"
+                  d="M18 10c0 3.866-3.582 7-8 7a8.962 8.962 0 01-3.911-.872L3 17l.872-3.911A8.962 8.962 0 012 10c0-3.866 3.582-7 8-7s8 3.134 8 7zm-9-3h2v2H9V7zm0 4h2v2H9v-2z"
+                  clip-rule="evenodd"
                 />
               </svg>
+
+              <!-- Close Icon -->
               <svg
                 v-else
                 class="w-4 h-4 md:w-7 md:h-7 xl:w-8 xl:h-8 text-white"
@@ -281,77 +283,76 @@ const removeFile = () => {
         </div>
 
         <!-- Input Section -->
-        <div class="absolute bottom-0 left-0 w-full p-4 bg-gray-800 rounded-b-xl flex flex-col space-y-3">
-    <!-- File Name and Remove Button -->
-    <div v-if="fileName" class="flex items-center space-x-2 bg-gray-700 p-2 rounded-md shadow-md">
-      <span class="text-white rounded-full px-3 py-1 text-sm truncate flex-grow bg-gray-600">
-        {{ fileName }}
-      </span>
-      <button
-        @click="removeFile"
-        class="bg-black text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-lg hover:bg-gray-900 transition-all duration-200"
-        type="button"
-      >
-        &times;
-      </button>
-    </div>
-
-    <!-- File Upload and Message Input -->
-    <div class="flex w-full items-center space-x-4">
-      <!-- File Upload -->
-      <div class="relative">
-        <label
-          class="flex items-center justify-center gap-2 w-12 h-12 bg-gray-700 text-white rounded-lg cursor-pointer hover:bg-gray-600 transition-all duration-200"
+        <div
+          class="absolute bottom-0 left-0 w-full p-4 bg-gray-800 rounded-b-xl flex flex-col space-y-3"
         >
-          <i class="fas fa-upload text-xl text-blue-400"></i>
-          <input
-            type="file"
-            @change="handleFileUpload"
-            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          />
-        </label>
-      </div>
+          <!-- File Name and Remove Button -->
+          <div
+            v-if="fileName"
+            class="flex items-center space-x-2 bg-gray-700 p-2 rounded-md shadow-md"
+          >
+            <span
+              class="text-white rounded-full px-3 py-1 text-sm truncate flex-grow bg-gray-600"
+            >
+              {{ fileName }}
+            </span>
+            <button
+              @click="removeFile"
+              class="bg-black text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-lg hover:bg-gray-900 transition-all duration-200"
+              type="button"
+            >
+              &times;
+            </button>
+          </div>
 
-      <!-- Message Input -->
-      <form @submit.prevent="sendMessage" class="relative flex-grow">
-        <input
-          v-model="newMessage"
-          type="text"
-          placeholder="Type your message or select a file..."
-          class="w-full p-3 bg-gray-700 text-white outline-none rounded-lg shadow-lg focus:ring-2 focus:ring-blue-500 transition-all duration-200"
-        />
-      </form>
-    </div>
-  </div>
+          <!-- File Upload and Message Input -->
+          <div class="flex w-full items-center space-x-4">
+            <!-- File Upload -->
+            <div class="relative">
+              <label
+                class="flex items-center justify-center gap-2 w-12 h-12 bg-gray-700 text-white rounded-lg cursor-pointer hover:bg-gray-600 transition-all duration-200"
+              >
+                <i class="fas fa-upload text-xl text-blue-400"></i>
+                <input
+                  type="file"
+                  @change="handleFileUpload"
+                  class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+              </label>
+            </div>
+
+            <!-- Message Input -->
+            <form @submit.prevent="sendMessage" class="relative flex-grow">
+              <input
+                v-model="newMessage"
+                type="text"
+                placeholder="Type your message or select a file..."
+                class="w-full p-3 bg-gray-700 text-white outline-none rounded-lg shadow-lg focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+              />
+            </form>
+          </div>
+        </div>
       </div>
     </transition>
     <button
       @click="handleChat"
-      :class="`${
-        isChatOpen ? 'hidden' : ''
-      } md:block fixed bottom-6 right-6 md:bottom-8 md:right-12 rounded-full p-0 bg-transparent border-none`"
+      class="md:block fixed bottom-6 right-6 md:bottom-8 md:right-12 rounded-full p-0 bg-transparent border-none focus:outline-none focus:ring-0"
     >
       <div
-        class="xl:p-1 w-9 h-9 md:w-12 md:h-12 xl:w-14 xl:h-14 rounded-full flex items-center justify-center bg-blue-500"
+        class="xl:p-1 w-12 h-12 xl:w-14 xl:h-14 rounded-full flex items-center justify-center bg-blue-500 transition-transform duration-300 transform hover:scale-105"
+        :class="{ 'rotate-180': isChatOpen }"
       >
-        <svg
+        <!-- Chat Bubble Icon -->
+        <i
           v-if="!isChatOpen"
-          class="w-6 h-6 md:w-7 md:h-7 xl:w-8 xl:h-8 text-white"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M4 6h16M4 12h16m-7 6h7"
-          />
-        </svg>
+          class="far fa-comment-alt text-xl text-white transition-opacity duration-300 ease-in-out"
+          style="font-size: 25px"
+        ></i>
+
+        <!-- Close Icon -->
         <svg
           v-else
-          class="w-6 h-6 md:w-7 md:h-7 xl:w-8 xl:h-8 text-white"
+          class="w-6 h-6 md:w-7 md:h-7 xl:w-8 xl:h-8 text-white transition-transform duration-300 ease-in-out"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
