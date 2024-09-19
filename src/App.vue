@@ -1,5 +1,4 @@
 <script setup>
-
 import { ref, watch, nextTick } from "vue";
 import axios from "axios";
 import MessageIcon from "@mui/icons-material/Message";
@@ -11,7 +10,7 @@ import greenWave from "./assets/greenwave.png";
 import yellowWave from "./assets/yellowwave.png";
 import defaultWave from "./assets/wave.png";
 import blueWave from "./assets/bluewave.png";
-import { useMessagesStore } from "./store/messages"; 
+import { useMessagesStore } from "./store/messages";
 
 const { messages, addMessage, updateMessage } = useMessagesStore();
 
@@ -21,6 +20,7 @@ function handleChat() {
 
 const isChatOpen = ref(false);
 const newMessage = ref("");
+const fileName = ref(""); // Reactive variable for the file name
 
 const selectedFile = ref(null); // For file upload
 const isLoading = ref(false);
@@ -137,6 +137,7 @@ const sendMessage = async () => {
   } finally {
     newMessage.value = "";
     selectedFile.value = null;
+    removeFile();
   }
 };
 
@@ -166,14 +167,21 @@ const handleFileUpload = (event) => {
   const file = event.target.files[0];
   if (file) {
     selectedFile.value = file; // Store the selected file
-    newMessage.value = file.name; // Show the file name in the input box
+
+    fileName.value = file.name; // Track file name separately to show the cross button
   }
+};
+
+// Remove the selected file
+const removeFile = () => {
+  selectedFile.value = null;
+  newMessage.value = ""; // Clear the message input
+  fileName.value = ""; // Hide the cross button
 };
 </script>
 
 <template>
   <div class="relative h-screen">
-   
     <transition name="fade-slide">
       <div
         v-if="isChatOpen"
@@ -216,7 +224,7 @@ const handleFileUpload = (event) => {
             class="rounded-full p-0 bg-transparent border-none"
           >
             <div
-              class="xl:p-1 w-6 h-6 md:w-12 md:h-12 xl:w-14 xl:h-14 rounded-full flex items-center justify-center bg-blue-500"
+              class="md:hidden xl:p-1 w-6 h-6 md:w-12 md:h-12 xl:w-14 xl:h-14 rounded-full flex items-center justify-center bg-blue-500"
             >
               <svg
                 v-if="!isChatOpen"
@@ -257,7 +265,6 @@ const handleFileUpload = (event) => {
           style="height: calc(100% - 150px)"
         >
           <div v-for="message in messages" :key="message.id" class="mb-4 flex">
-          
             <div v-if="!message.isAI" class="message-bubble user">
               <p class="text-left text-sm">{{ message.text }}</p>
               <div v-if="message.fileName" class="text-xs mt-1">
@@ -265,7 +272,6 @@ const handleFileUpload = (event) => {
               </div>
             </div>
 
-         
             <div v-if="message.isAI" class="message-bubble ai">
               <div v-if="message.isLoading" class="loader"></div>
               <p v-else class="text-left text-sm">{{ message.text }}</p>
@@ -275,35 +281,48 @@ const handleFileUpload = (event) => {
         </div>
 
         <!-- Input Section -->
-        <div
-          class="absolute bottom-0 left-0 w-full p-4 bg-gray-800 rounded-b-xl flex items-center"
+        <div class="absolute bottom-0 left-0 w-full p-4 bg-gray-800 rounded-b-xl flex flex-col space-y-3">
+    <!-- File Name and Remove Button -->
+    <div v-if="fileName" class="flex items-center space-x-2 bg-gray-700 p-2 rounded-md shadow-md">
+      <span class="text-white rounded-full px-3 py-1 text-sm truncate flex-grow bg-gray-600">
+        {{ fileName }}
+      </span>
+      <button
+        @click="removeFile"
+        class="bg-black text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-lg hover:bg-gray-900 transition-all duration-200"
+        type="button"
+      >
+        &times;
+      </button>
+    </div>
+
+    <!-- File Upload and Message Input -->
+    <div class="flex w-full items-center space-x-4">
+      <!-- File Upload -->
+      <div class="relative">
+        <label
+          class="flex items-center justify-center gap-2 w-12 h-12 bg-gray-700 text-white rounded-lg cursor-pointer hover:bg-gray-600 transition-all duration-200"
         >
-          <!-- File Upload -->
-          <div class="relative">
-            <label
-              class="flex items-center justify-center gap-2 w-10 h-10 bg-gray-700 text-white rounded-l cursor-pointer hover:bg-gray-600"
-            >
-              
-              <i class="fas fa-upload text-lg text-blue-500"></i>
+          <i class="fas fa-upload text-xl text-blue-400"></i>
+          <input
+            type="file"
+            @change="handleFileUpload"
+            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          />
+        </label>
+      </div>
 
-              <input
-                type="file"
-                @change="handleFileUpload"
-                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              />
-            </label>
-          </div>
-
-          <!-- Message Input -->
-          <form @submit.prevent="sendMessage" class="w-full">
-            <input
-              v-model="newMessage"
-              type="text"
-              placeholder="Type your message or select a file..."
-              class="w-full p-2 rounded-r bg-gray-700 text-white outline-none"
-            />
-          </form>
-        </div>
+      <!-- Message Input -->
+      <form @submit.prevent="sendMessage" class="relative flex-grow">
+        <input
+          v-model="newMessage"
+          type="text"
+          placeholder="Type your message or select a file..."
+          class="w-full p-3 bg-gray-700 text-white outline-none rounded-lg shadow-lg focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+        />
+      </form>
+    </div>
+  </div>
       </div>
     </transition>
     <button
@@ -351,7 +370,6 @@ const handleFileUpload = (event) => {
 </template>
 
 <style scoped>
-
 .mobile-size {
   height: 100vh;
   width: 100%;
@@ -359,10 +377,10 @@ const handleFileUpload = (event) => {
 }
 @media (max-width: 768px) {
   .message-bubble {
-    max-width: 80%; 
+    max-width: 80%;
   }
   .wave {
-    height: 80px; 
+    height: 80px;
   }
 }
 
@@ -458,70 +476,63 @@ section {
 
 .mb-4 {
   display: flex;
-  flex-direction: column; 
+  flex-direction: column;
   width: 100%;
 }
 
-
 .message-bubble {
-  max-width: 60%; 
+  max-width: 60%;
   padding: 8px 12px;
-  border-radius: 12px; 
-  overflow-wrap: break-word; 
-  word-wrap: break-word; 
-  white-space: pre-wrap; 
+  border-radius: 12px;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  white-space: pre-wrap;
   margin-bottom: 8px;
   display: inline-block;
 }
 
-
 .message-bubble.user {
-  background-color: #4a4a4a; 
-  align-self: flex-start; 
+  background-color: #4a4a4a;
+  align-self: flex-start;
 }
-
 
 .message-bubble.ai {
-  background-color: #007bff; 
-  align-self: flex-end; 
+  background-color: #007bff;
+  align-self: flex-end;
 }
-
 
 .message-bubble p {
   margin: 0;
   overflow-wrap: break-word;
-  word-wrap: break-word; 
+  word-wrap: break-word;
 }
 ::-webkit-scrollbar {
-  width: 12px; 
+  width: 12px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #374151; 
-  border-radius: 6px; 
+  background: #374151;
+  border-radius: 6px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555; 
+  background: #555;
 }
 
 ::-webkit-scrollbar-track {
   background: #f1f1f1;
-  border-radius: 6px; 
+  border-radius: 6px;
 }
-
 
 .scrollbar-container {
-  scrollbar-width: thin; 
-  scrollbar-color: #888 #f1f1f1; 
+  scrollbar-width: thin;
+  scrollbar-color: #888 #f1f1f1;
 }
-
 
 .scrollable {
   max-height: 500px;
-  overflow-y: auto; 
+  overflow-y: auto;
 }
-
 
 .loader {
   width: 5px;
