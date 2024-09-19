@@ -1,7 +1,8 @@
 <script setup>
-import chat from "./assets/chat.svg";
-import { ref } from "vue";
+
+import { ref, watch, nextTick } from "vue";
 import axios from "axios";
+import MessageIcon from "@mui/icons-material/Message";
 import bot from "../src/assets/bot.png";
 import wave from "./assets/wave.vue";
 import darkblueWave from "./assets/darkbluewave.png";
@@ -10,6 +11,9 @@ import greenWave from "./assets/greenwave.png";
 import yellowWave from "./assets/yellowwave.png";
 import defaultWave from "./assets/wave.png";
 import blueWave from "./assets/bluewave.png";
+import { useMessagesStore } from "./store/messages"; 
+
+const { messages, addMessage, updateMessage } = useMessagesStore();
 
 function handleChat() {
   isChatOpen.value = !isChatOpen.value;
@@ -17,8 +21,24 @@ function handleChat() {
 
 const isChatOpen = ref(false);
 const newMessage = ref("");
-const messages = ref([]);
+
 const selectedFile = ref(null); // For file upload
+const isLoading = ref(false);
+const chatContainer = ref(null);
+const lastMessage = ref(null);
+const scrollToBottom = () => {
+  // Check if the lastMessage exists in the DOM before scrolling
+  if (lastMessage.value && lastMessage.value.scrollIntoView) {
+    lastMessage.value.scrollIntoView({ behavior: "smooth" });
+  }
+};
+
+// Watch for changes in messages and scroll when they update
+watch(messages, async () => {
+  // Wait for the DOM to update before scrolling
+  await nextTick();
+  scrollToBottom();
+});
 
 // The function to send an AI message using OpenAI API
 // const getAIResponse = async (userMessage) => {
@@ -67,26 +87,23 @@ const getAIResponse = async (userMessage) => {
 };
 
 const sendMessage = async () => {
-  if (newMessage.value.trim() === "" && !selectedFile.value) return; // Don't proceed if no message or file
+  if (newMessage.value.trim() === "" && !selectedFile.value) return;
 
-  // Prepare the formData if file is selected
   const formData = new FormData();
   let fileUploadResponse = null;
 
   if (selectedFile.value) {
     formData.append("file", selectedFile.value);
-    formData.append("message", newMessage.value); // Append message with file if both exist
+    formData.append("message", newMessage.value);
   }
 
-  // Add the user's message to the chat
-  messages.value.push({
+  addMessage({
     id: Date.now(),
     text: newMessage.value,
     isAI: false,
   });
 
   try {
-    // POST file and message to the backend if a file is selected
     if (selectedFile.value) {
       fileUploadResponse = await axios.post("https://file.io", formData, {
         headers: {
@@ -97,27 +114,32 @@ const sendMessage = async () => {
       console.log("File uploaded:", fileUploadResponse.data);
     }
 
-    // If only a message is sent or if both file and message are sent, get AI response
-    const aiResponse = await getAIResponse(newMessage.value);
-    messages.value.push({
-      id: Date.now(),
-      text: aiResponse,
+    const loaderMessageId = Date.now() + 1;
+    addMessage({
+      id: loaderMessageId,
+      text: "",
       isAI: true,
+      isLoading: true,
     });
 
-    // Clear the input and reset file after sending
-    selectedFile.value = null;
-    newMessage.value = "";
+    const aiResponse = await getAIResponse(newMessage.value);
 
+    updateMessage(loaderMessageId, {
+      text: aiResponse,
+      isLoading: false,
+    });
   } catch (error) {
     console.error("Error posting data:", error);
-    messages.value.push({
-      id: Date.now(),
-      text: "Error processing your request.",
-      isAI: true,
+    updateMessage(loaderMessageId, {
+      text: "Error generating response.",
+      isLoading: false,
     });
+  } finally {
+    newMessage.value = "";
+    selectedFile.value = null;
   }
 };
+
 function getWaveStyle(waveNumber) {
   // if (waveNumber === 4) {
   //   return {
@@ -139,7 +161,6 @@ function getWaveStyle(waveNumber) {
   };
 }
 
-
 // Handle file input change
 const handleFileUpload = (event) => {
   const file = event.target.files[0];
@@ -151,90 +172,233 @@ const handleFileUpload = (event) => {
 </script>
 
 <template>
-  <div class="relative h-screen bg-red-200">
-    <!-- Main Content -->
+  <div class="relative h-screen">
+   
+    <transition name="fade-slide">
+      <div
+        v-if="isChatOpen"
+        class="fixed mobile-size md:bottom-28 md:right-12 inset-off md:w-96 laptop-height md:rounded-xl bg-dark-blue text-white md:overflow-hidden"
+      >
+        <section>
+          <div
+            class="wave"
+            id="wave1"
+            :style="getWaveStyle(1)"
+            style="--i: 1"
+          ></div>
+          <div
+            class="wave"
+            id="wave2"
+            :style="getWaveStyle(2)"
+            style="--i: 2"
+          ></div>
+          <div
+            class="wave"
+            id="wave3"
+            :style="getWaveStyle(3)"
+            style="--i: 3"
+          ></div>
+          <div
+            class="wave"
+            id="wave4"
+            :style="getWaveStyle(4)"
+            style="--i: 4"
+          ></div>
+        </section>
+        <div class="mt-10 flex justify-between items-center gap-2 px-6">
+          <div class="flex gap-2">
+            <img :src="bot" class="h-10 w-auto" />
+            <div class="self-center">Bop</div>
+          </div>
 
-    <div
-      v-if="isChatOpen"
-      class="fixed bottom-28 right-12 overflow-x-hidden overflow-y-hidden bg-dark-blue h-600px rounded-xl w-96 text-white"
-    >
-      <section>
-        <div class="wave" id="wave1" :style="getWaveStyle(1)" style="--i: 1"></div>
-        <div class="wave" id="wave2" :style="getWaveStyle(2)" style="--i: 2"></div>
-        <div class="wave" id="wave3" :style="getWaveStyle(3)" style="--i: 3"></div>
-        <div class="wave" id="wave4" :style="getWaveStyle(4)" style="--i: 4"></div>
-      </section>
-      <div class="mt-10 flex items-center gap-2 px-6">
-        <div><img :src="bot" class="h-10 w-auto" /></div>
-        <div>Bop</div>
-      </div>
-      <div class="px-6 py-4 h-96 overflow-y-auto scrollable" style="height: calc(100% - 150px)">
-        <div v-for="message in messages" :key="message.id" class="mb-4 flex">
-          <!-- User Messages -->
-          <div v-if="!message.isAI" class="message-bubble user">
-            <p class="text-left text-sm">{{ message.text }}</p>
-            <div v-if="message.fileName" class="text-xs mt-1">
-              File: {{ message.fileName }}
+          <button
+            @click="handleChat"
+            class="rounded-full p-0 bg-transparent border-none"
+          >
+            <div
+              class="xl:p-1 w-6 h-6 md:w-12 md:h-12 xl:w-14 xl:h-14 rounded-full flex items-center justify-center bg-blue-500"
+            >
+              <svg
+                v-if="!isChatOpen"
+                class="w-4 h-4 md:w-7 md:h-7 xl:w-8 xl:h-8 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 6h16M4 12h16m-7 6h7"
+                />
+              </svg>
+              <svg
+                v-else
+                class="w-4 h-4 md:w-7 md:h-7 xl:w-8 xl:h-8 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </div>
+          </button>
+        </div>
+        <div
+          class="px-6 py-4 h-96 overflow-y-auto scrollable"
+          ref="chatContainer"
+          style="height: calc(100% - 150px)"
+        >
+          <div v-for="message in messages" :key="message.id" class="mb-4 flex">
+          
+            <div v-if="!message.isAI" class="message-bubble user">
+              <p class="text-left text-sm">{{ message.text }}</p>
+              <div v-if="message.fileName" class="text-xs mt-1">
+                File: {{ message.fileName }}
+              </div>
+            </div>
+
+         
+            <div v-if="message.isAI" class="message-bubble ai">
+              <div v-if="message.isLoading" class="loader"></div>
+              <p v-else class="text-left text-sm">{{ message.text }}</p>
             </div>
           </div>
+          <div ref="lastMessage"></div>
+        </div>
 
-          <!-- AI Messages -->
-          <div v-if="message.isAI" class="message-bubble ai">
-            <p class="text-left text-sm">{{ message.text }}</p>
+        <!-- Input Section -->
+        <div
+          class="absolute bottom-0 left-0 w-full p-4 bg-gray-800 rounded-b-xl flex items-center"
+        >
+          <!-- File Upload -->
+          <div class="relative">
+            <label
+              class="flex items-center justify-center gap-2 w-10 h-10 bg-gray-700 text-white rounded-l cursor-pointer hover:bg-gray-600"
+            >
+              
+              <i class="fas fa-upload text-lg text-blue-500"></i>
+
+              <input
+                type="file"
+                @change="handleFileUpload"
+                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+            </label>
           </div>
+
+          <!-- Message Input -->
+          <form @submit.prevent="sendMessage" class="w-full">
+            <input
+              v-model="newMessage"
+              type="text"
+              placeholder="Type your message or select a file..."
+              class="w-full p-2 rounded-r bg-gray-700 text-white outline-none"
+            />
+          </form>
         </div>
       </div>
-
-      <!-- Input Section -->
-      <div class="absolute bottom-0 left-0 w-full p-4 bg-gray-800 rounded-b-xl flex items-center">
-    <!-- File Upload -->
-    <div class="relative">
-      <label class="flex items-center justify-center w-10 h-10 bg-gray-700 text-white rounded-l cursor-pointer hover:bg-gray-600">
-        <!-- File Upload Icon (FontAwesome or any other icon library) -->
+    </transition>
+    <button
+      @click="handleChat"
+      :class="`${
+        isChatOpen ? 'hidden' : ''
+      } md:block fixed bottom-6 right-6 md:bottom-8 md:right-12 rounded-full p-0 bg-transparent border-none`"
+    >
+      <div
+        class="xl:p-1 w-9 h-9 md:w-12 md:h-12 xl:w-14 xl:h-14 rounded-full flex items-center justify-center bg-blue-500"
+      >
         <svg
-          xmlns="http://www.w3.org/2000/svg"
+          v-if="!isChatOpen"
+          class="w-6 h-6 md:w-7 md:h-7 xl:w-8 xl:h-8 text-white"
           fill="none"
-          viewBox="0 0 24 24"
           stroke="currentColor"
-          class="w-6 h-6"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
         >
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
             stroke-width="2"
-            d="M3 16l4-4m0 0l4 4m-4-4v12m0 0H7m4 0h10M9 8h3m0 0h3m0 0h3"
+            d="M4 6h16M4 12h16m-7 6h7"
           />
         </svg>
-        <input
-          type="file"
-          @change="handleFileUpload"
-          class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-        />
-      </label>
-    </div>
-
-    <!-- Message Input -->
-    <form @submit.prevent="sendMessage" class="w-full">
-      <input
-        v-model="newMessage"
-        type="text"
-        placeholder="Type your message or select a file..."
-        class="w-full p-2 rounded-r bg-gray-700 text-white outline-none"
-      />
-    </form>
-  </div>
-    </div>
-
-    <button
-      @click="handleChat"
-      class="fixed bottom-8 right-12 rounded-full p-0 bg-transparent border-none"
-    >
-      <img :src="chat" alt="chat" class="w-16 h-auto bg-transparent" />
+        <svg
+          v-else
+          class="w-6 h-6 md:w-7 md:h-7 xl:w-8 xl:h-8 text-white"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      </div>
     </button>
   </div>
 </template>
 
 <style scoped>
+
+.mobile-size {
+  height: 100vh;
+  width: 100%;
+  inset: 0;
+}
+@media (max-width: 768px) {
+  .message-bubble {
+    max-width: 80%; 
+  }
+  .wave {
+    height: 80px; 
+  }
+}
+
+@media (min-width: 768px) {
+  .laptop-height {
+    height: 75vh;
+  }
+  .inset-off {
+    left: auto;
+    top: auto;
+  }
+
+  .md\:bottom-28 {
+    bottom: 7rem; /* Original bottom distance for laptops */
+  }
+  .md\:right-12 {
+    right: 3rem; /* Position from the right for laptops */
+  }
+
+  .md\:w-96 {
+    width: 24rem; /* Width for laptops */
+  }
+  .md\:rounded-xl {
+    border-radius: 0.75rem; /* Rounded corners for desktops */
+  }
+}
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.fade-slide-enter, 
+.fade-slide-leave-to /* .fade-slide-leave-active in <2.1.8 */ {
+  opacity: 0;
+  transform: translateY(20px);
+}
 section {
   position: relative;
   width: 100%;
@@ -259,7 +423,6 @@ section {
   z-index: 1000;
   opacity: 1;
   background-position-x: 300px;
- 
 }
 
 .wave#wave2 {
@@ -267,7 +430,6 @@ section {
   opacity: 0.5;
   /* opacity:1; */
   background-position-x: 200px;
-  
 }
 
 .wave#wave3 {
@@ -296,67 +458,94 @@ section {
 
 .mb-4 {
   display: flex;
-  flex-direction: column; /* Ensure vertical stacking of elements */
+  flex-direction: column; 
   width: 100%;
 }
 
-/* Message bubbles */
+
 .message-bubble {
-  max-width: 60%; /* Adjust based on your design */
+  max-width: 60%; 
   padding: 8px 12px;
-  border-radius: 12px; /* Rounded edges */
-  overflow-wrap: break-word; /* Break long words */
-  word-wrap: break-word; /* Ensure text wraps */
-  white-space: pre-wrap; /* Preserve whitespace */
+  border-radius: 12px; 
+  overflow-wrap: break-word; 
+  word-wrap: break-word; 
+  white-space: pre-wrap; 
   margin-bottom: 8px;
   display: inline-block;
 }
 
-/* User messages alignment */
+
 .message-bubble.user {
-  background-color: #4a4a4a; /* User message color */
-  align-self: flex-start; /* Align to the left */
+  background-color: #4a4a4a; 
+  align-self: flex-start; 
 }
 
-/* AI messages alignment */
+
 .message-bubble.ai {
-  background-color: #007bff; /* AI message color */
-  align-self: flex-end; /* Align to the right */
+  background-color: #007bff; 
+  align-self: flex-end; 
 }
 
-/* Ensure the message text is not overflowing */
+
 .message-bubble p {
   margin: 0;
-  overflow-wrap: break-word; /* Break long words */
-  word-wrap: break-word; /* Ensure text wraps */
+  overflow-wrap: break-word;
+  word-wrap: break-word; 
 }
 ::-webkit-scrollbar {
-  width: 12px; /* Width of the scrollbar */
+  width: 12px; 
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #888; /* Color of the scrollbar thumb */
-  border-radius: 6px; /* Round the corners */
+  background: #374151; 
+  border-radius: 6px; 
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555; /* Color of the scrollbar thumb when hovered */
+  background: #555; 
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1; /* Background of the track */
-  border-radius: 6px; /* Round the corners */
+  background: #f1f1f1;
+  border-radius: 6px; 
 }
 
-/* Custom scrollbar for Firefox */
+
 .scrollbar-container {
-  scrollbar-width: thin; /* Thin scrollbar */
-  scrollbar-color: #888 #f1f1f1; /* Thumb and track colors */
+  scrollbar-width: thin; 
+  scrollbar-color: #888 #f1f1f1; 
 }
 
-/* Add this class to your scrollable container */
+
 .scrollable {
-  max-height: 500px; /* Adjust as needed */
-  overflow-y: auto; /* Enable vertical scrolling */
+  max-height: 500px;
+  overflow-y: auto; 
+}
+
+
+.loader {
+  width: 5px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  animation: l5 1s infinite linear alternate;
+}
+
+@keyframes l5 {
+  0% {
+    box-shadow: 8px 0 #000, -8px 0 #0002;
+    background: #000;
+  }
+  33% {
+    box-shadow: 8px 0 #000, -8px 0 #0002;
+    background: #0002;
+  }
+  66% {
+    box-shadow: 8px 0 #0002, -8px 0 #000;
+    background: #0002;
+  }
+  100% {
+    box-shadow: 8px 0 #0002, -8px 0 #000;
+    background: #000;
+  }
 }
 </style>

@@ -9,7 +9,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@emotion/react": "^11.13.3",
+    "@emotion/styled": "^11.13.0",
+    "@heroicons/vue": "^2.1.5",
+    "@mui/icons-material": "^6.1.0",
+    "@mui/material": "^6.1.0",
+    "@vue-hero-icons/outline": "^1.7.2",
+    "@vue-hero-icons/solid": "^1.7.2",
     "axios": "^1.7.7",
+    "pinia": "^2.2.2",
     "vue": "^3.4.37"
   },
   "devDependencies": {
